@@ -8,7 +8,6 @@ Add-Type -assemblyname System.ServiceProcess
 . "$PSScriptRoot\ProcessInfo.ps1"
 
 
-
 $global:PSColor = @{
     File = @{
         Default    = @{ Color = 'White' }
@@ -17,7 +16,7 @@ $global:PSColor = @{
         Code       = @{ Color = 'Magenta'; Pattern = '\.(java|c|cpp|cs|js|css|html)$' }
         Executable = @{ Color = 'Red'; Pattern = '\.(exe|bat|cmd|py|pl|ps1|psm1|vbs|rb|reg)$' }
         Text       = @{ Color = 'Yellow'; Pattern = '\.(txt|cfg|conf|ini|csv|log|config|xml|yml|md|markdown)$' }
-        Compressed = @{ Color = 'Green'; Pattern = '\.(zip|tar|gz|rar|jar|war|7z)$' }
+        Compressed = @{ Color = 'Green'; Pattern = '\.(zip|tar|gz|rar|jar|war)$' }
     }
     Service = @{
         Default = @{ Color = 'White' }
@@ -30,17 +29,13 @@ $global:PSColor = @{
         LineNumber = @{ Color = 'Yellow' }
         Line       = @{ Color = 'White' }
     }
-	NoMatch = @{
-        Default    = @{ Color = 'White' }
-        Path       = @{ Color = 'Cyan'}
-        LineNumber = @{ Color = 'Yellow' }
-        Line       = @{ Color = 'White' }
-    }
 }
 
 $script:showHeader=$true
 
-New-CommandWrapper Out-Default -Process {
+New-CommandWrapper Out-Default -Begin {
+    write-host ""
+} -Process {
 
     if(($_ -is [System.IO.DirectoryInfo]) -or ($_ -is [System.IO.FileInfo]))
     {

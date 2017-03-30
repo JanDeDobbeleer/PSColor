@@ -1,4 +1,53 @@
 
+$folderSymbols = @{
+    ".git"       = [char]::ConvertFromUtf32(0xF1D3)
+    ".idea"      = [char]::ConvertFromUtf32(0xE7B5)
+    ".vscode"    = [char]::ConvertFromUtf32(0xE70C)
+}
+
+$extensionSymbols = @{
+    ".gitignore" = [char]::ConvertFromUtf32(0xF1D3)
+    ".zip"       = [char]::ConvertFromUtf32(0xF1C6)
+    ".json"      = [char]::ConvertFromUtf32(0xE60B)
+    ".py"        = [char]::ConvertFromUtf32(0xE606)
+    ".xml"       = [char]::ConvertFromUtf32(0xE60E)
+    ".html"      = [char]::ConvertFromUtf32(0xE60E)
+    ".go"        = [char]::ConvertFromUtf32(0xE627)
+    ".md"        = [char]::ConvertFromUtf32(0xE73E)
+    ".scss"      = [char]::ConvertFromUtf32(0xE74B)
+    ".sass"      = [char]::ConvertFromUtf32(0xE74B)
+    ".coffee"    = [char]::ConvertFromUtf32(0xE74B)
+    ".swift"     = [char]::ConvertFromUtf32(0xE755)
+    ".ps1"       = [char]::ConvertFromUtf32(0xE795)
+    ".psm1"      = [char]::ConvertFromUtf32(0xE795)
+    ".psd1"      = [char]::ConvertFromUtf32(0xE795)
+    ".cs"        = [char]::ConvertFromUtf32(0xE72E)
+    ".fs"        = [char]::ConvertFromUtf32(0xE72E)
+    ".vbs"       = [char]::ConvertFromUtf32(0xF40F)
+    ".gif"       = [char]::ConvertFromUtf32(0xF40F)
+    ".jpg"       = [char]::ConvertFromUtf32(0xF40F)
+    ".jpeg"      = [char]::ConvertFromUtf32(0xF40F)
+    ".doc"       = [char]::ConvertFromUtf32(0xF1C2)
+    ".docx"      = [char]::ConvertFromUtf32(0xF1C2)
+    ".xls"       = [char]::ConvertFromUtf32(0xF1C3)
+    ".xlsx"      = [char]::ConvertFromUtf32(0xF1C3)
+    ".ppt"       = [char]::ConvertFromUtf32(0xF1C4)
+    ".pptx"      = [char]::ConvertFromUtf32(0xF1C4)
+    ".txt"       = [char]::ConvertFromUtf32(0xF40E)
+    ".rb"        = [char]::ConvertFromUtf32(0xE791)
+    ".mov"       = [char]::ConvertFromUtf32(0xF1C8)
+    ".mp4"       = [char]::ConvertFromUtf32(0xF1C8)
+    ".mp3"       = [char]::ConvertFromUtf32(0xF1C7)
+    ".wav"       = [char]::ConvertFromUtf32(0xF1C7)
+    ".ogg"       = [char]::ConvertFromUtf32(0xF1C7)
+    ".ai"        = [char]::ConvertFromUtf32(0xE7B4)
+    ".ps"        = [char]::ConvertFromUtf32(0xE7B8)
+    ".js"        = [char]::ConvertFromUtf32(0xE74E)
+    ".pho"       = [char]::ConvertFromUtf32(0xE73D)
+    ".hs"        = [char]::ConvertFromUtf32(0xE61F)
+    ".lhs"       = [char]::ConvertFromUtf32(0xE61F)
+}
+
 # Helper method to write file length in a more human readable format
 function Write-FileLength
 {
@@ -24,13 +73,40 @@ function Write-FileLength
     return $length.ToString() + '  '
 }
 
+function Get-FileSymbolFromName {
+    param(
+        $name,
+        $hashtable,
+        $default
+    )
+
+    $symbol = $hashtable.Item($name)
+    if ($symbol) {
+        return " $symbol "
+    }
+    return $default
+}
+
+function Get-FileSymbol
+{
+    param($file)
+
+    if ($file -is [System.IO.DirectoryInfo]) {
+        Get-FileSymbolFromName -name $file.Name -hashtable $folderSymbols -default " $([char]::ConvertFromUtf32(0xF07C)) "
+    }
+    else {
+        Get-FileSymbolFromName -name $file.Extension -hashtable $extensionSymbols -default " $([char]::ConvertFromUtf32(0xF15B)) "
+    }
+
+    
+}
+
 # Outputs a line of a DirectoryInfo or FileInfo
 function Write-Color-LS
 {
-    param ([string]$color = "white", $file)
+    param ([string]$color = "white", $file, $symbol)
 
-    $length = if ($file -is [System.IO.DirectoryInfo]) { $null } else { $file.length }
-    Write-host ("{0,-7} {1,25} {2,10} {3}" -f $file.mode, ([String]::Format("{0,10}  {1,8}", $file.LastWriteTime.ToString("d"), $file.LastWriteTime.ToString("t"))), (Write-FileLength $length), $file.name) -foregroundcolor $color
+    Write-host ("{0,-7} {1} {2,10} {3} {4}" -f $file.mode, ([String]::Format("{0,10}  {1,8}", $file.LastWriteTime.ToString("d"), $file.LastWriteTime.ToString("t"))), (Write-FileLength $file.length), $symbol, $file.name) -foregroundcolor $color
 }
 
 function FileInfo {
@@ -52,49 +128,32 @@ function FileInfo {
     $compressed = New-Object System.Text.RegularExpressions.Regex(
         $global:PSColor.File.Compressed.Pattern, $regex_opts)
 
-	if ($file -is [System.IO.DirectoryInfo])
-	{
-	    $currentdir = $file.Parent.FullName
-	} else 
-	{
-		$currentdir = $file.DirectoryName
-	}
-    if($script:directory -ne $currentdir)
-    {
-	   $script:directory = $currentdir
-       Write-Host
-       Write-Host "    Directory: " -noNewLine	   
-       Write-Host " $currentdir`n" -foregroundcolor "Green"
-       Write-Host "Mode                LastWriteTime     Length Name"
-       Write-Host "----                -------------     ------ ----"
-    }
-
     if ($hidden.IsMatch($file.Name))
     {
-        Write-Color-LS $global:PSColor.File.Hidden.Color $file
+        Write-Color-LS $global:PSColor.File.Hidden.Color $file -symbol (Get-FileSymbol $file)
     }
     elseif ($file -is [System.IO.DirectoryInfo])
     {
-        Write-Color-LS $global:PSColor.File.Directory.Color $file
+        Write-Color-LS $global:PSColor.File.Directory.Color $file -symbol (Get-FileSymbol $file)
     }
     elseif ($code.IsMatch($file.Name))
     {
-        Write-Color-LS $global:PSColor.File.Code.Color $file
+        Write-Color-LS $global:PSColor.File.Code.Color $file -symbol (Get-FileSymbol $file)
     }
     elseif ($executable.IsMatch($file.Name))
     {
-        Write-Color-LS $global:PSColor.File.Executable.Color $file
+        Write-Color-LS $global:PSColor.File.Executable.Color $file -symbol (Get-FileSymbol $file)
     }
     elseif ($text_files.IsMatch($file.Name))
     {
-        Write-Color-LS $global:PSColor.File.Text.Color $file
+        Write-Color-LS $global:PSColor.File.Text.Color $file -symbol (Get-FileSymbol $file)
     }
     elseif ($compressed.IsMatch($file.Name))
     {
-        Write-Color-LS $global:PSColor.File.Compressed.Color $file
+        Write-Color-LS $global:PSColor.File.Compressed.Color $file -symbol (Get-FileSymbol $file)
     }
     else
     {
-        Write-Color-LS $global:PSColor.File.Default.Color $file
+        Write-Color-LS $global:PSColor.File.Default.Color $file -symbol (Get-FileSymbol $file)
     }
 }
